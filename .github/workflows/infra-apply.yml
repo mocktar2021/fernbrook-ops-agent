@@ -1,3 +1,4 @@
+# Pipeline definition, registered with GitHub on this commit.
 name: Infra Apply
 
 # Creates or updates the platform stack: data, tools, identity, memory,

@@ -1,3 +1,4 @@
+# Pipeline definition, registered with GitHub on this commit.
 name: Destroy
 
 # Tears down EVERYTHING the pipelines created: the agent runtime first, then

@@ -1,3 +1,4 @@
+# Pipeline definition, registered with GitHub on this commit.
 name: App Deploy
 
 # Ships a new version of the AGENT (not the platform):
