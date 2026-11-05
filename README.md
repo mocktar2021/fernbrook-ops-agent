@@ -79,7 +79,7 @@ The platform stack publishes its IDs to SSM Parameter Store (`/fernbrook/config/
 **Known limits:**
 - `us-east-1` only. The Python code hardcodes the region and Terraform enforces it.
 - One environment per AWS account, because resource names are fixed.
-- The Terraform was written against provider documentation and has not been run end to end by the author. [`docs/GETTING-STARTED.md`](docs/GETTING-STARTED.md#known-unknowns) lists what to expect on a first run.
+- The Terraform was written from provider documentation and debugged on its first end-to-end deployment (November 2026). [`docs/GETTING-STARTED.md`](docs/GETTING-STARTED.md#what-broke-on-the-first-deploy) lists the seven things that broke and how each was fixed.
 
 ## Repository layout
 

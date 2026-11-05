@@ -22,6 +22,10 @@ Symptom-first, collected from the failure modes met while building this project.
 
 **`AccessDeniedException: ... is not available for this account`.** The model is not offered to your account. Run `aws bedrock get-foundation-model-availability --region us-east-1 --model-id <model>`. `agreementAvailability: NOT_AVAILABLE` means the AWS Marketplace agreement for that model is not offered to your account (seen with Claude Sonnet 5.5 and Haiku 5.5 on one account, while Sonnet 4.6 worked). Test other Active models with a direct `converse` call and set `model_id` to one that replies.
 
+**`ResourceNotFoundException: Model use case details have not been submitted for this account`.** Anthropic's one-time use-case form is missing. Submit it from the Anthropic page under **Providers** in the Bedrock console, then retry after a few minutes. It is account-wide; Terraform cannot do it.
+
+**`AccessDeniedException: ... not authorized to perform the required AWS Marketplace actions (aws-marketplace:ViewSubscriptions, aws-marketplace:Subscribe)`.** There is no Marketplace subscription for the model yet. The first call from an identity allowed to subscribe creates it, so make one `converse` call from your admin user (Phase 1.3). Do not grant Marketplace permissions to the runtime role: once the subscription exists, the role does not need them. If your admin user also gets this, check that the account has a valid default payment method.
+
 **`KeyError: 'text'` or empty replies from your own model code.** Newer models can return a reasoning block before the text block. Collect every block that has a `text` key instead of reading `content[0]`.
 
 ## Gateway, Policy, and tools
@@ -48,6 +52,14 @@ Symptom-first, collected from the failure modes met while building this project.
 
 **"Could not assume role" / "Not authorized to perform sts:AssumeRoleWithWebIdentity".** The role's trust policy did not match the token. Check, in order: the `AWS_ROLE_ARN` secret exists in the *environment* the job names (not only at repository level); `github_owner` and `github_repo` in your bootstrap `terraform.tfvars` match your repository exactly, including capitalization; the workflow ran on `main`, because the environments are restricted to it.
 
+Newer repositories get an **immutable OIDC subject** with numeric IDs: `repo:OWNER@OWNER_ID/REPO@REPO_ID:environment:NAME`. Set `github_owner_id` and `github_repo_id` in bootstrap (Phase 2 shows the `gh api` command) and apply bootstrap. To see the exact subject GitHub sent, read the failed event in CloudTrail:
+
+```bash
+aws cloudtrail lookup-events --region us-east-1 --max-results 5 \
+  --lookup-attributes AttributeKey=EventName,AttributeValue=AssumeRoleWithWebIdentity \
+  --query 'Events[].CloudTrailEvent' --output text | grep -o '"subjectFromWebIdentityToken":"[^"]*"'
+```
+
 **Infra Plan is skipped on a pull request.** It only runs when files under `infrastructure/platform`, `policy` or `tools` change, and never for pull requests from forks.
 
 **Infra role `AccessDenied` during apply.** The role is missing an action. Add it to `infrastructure/bootstrap/role-infra-apply.tf` and run `terraform apply` in the bootstrap folder from your laptop. The pipeline cannot widen its own permissions.
@@ -56,9 +68,26 @@ Symptom-first, collected from the failure modes met while building this project.
 
 **App Deploy is red but the agent still works.** That is the rollback doing its job: the smoke test failed and the previous good version was redeployed. Read the smoke-test step to see which check failed.
 
+**A re-run fails with an error you already fixed.** GitHub re-runs always use the run's original commit. After pushing a code fix, start a new run (a new push or `gh workflow run`); re-run only when the fix was outside the repository, such as an IAM change applied from bootstrap.
+
+**`AccessDenied` on `ssm:GetParametersByPath` for `/fernbrook/config`.** That call is authorized against the path itself, not only the parameters under it. The role needs both `parameter/fernbrook/config` and `parameter/fernbrook/config/*`.
+
+**Release stack: "Failed creating service linked role".** The first AgentCore Runtime in an account creates `AWSServiceRoleForBedrockAgentCoreRuntimeIdentity` as the caller. The app-deploy role needs `iam:CreateServiceLinkedRole`, scoped to that role and `iam:AWSServiceName = runtime-identity.bedrock-agentcore.amazonaws.com`.
+
+**Packaging fails with pip `ResolutionImpossible`.** Two pins conflict. Reproduce locally with `python scripts/package_agent.py --python-version 3.13`, read each package's requirements on PyPI, and pin a compatible version in both `requirements.txt` and `requirements-runtime.txt`.
+
+**Smoke test: "own order not returned", but the order exists.** Test each layer: `aws dynamodb get-item` for the order, `aws lambda invoke` on `fernbrook-order-lookup`, and the demo user's `custom:customer_id` in Cognito. If all three are right, the agent lost the Gateway result. Read the runtime log for `Gateway call failed`. On the first deploy the cause was a numeric `read_timeout_seconds`; it must be a `timedelta`.
+
 **Packaging fails on a dependency.** `scripts/package_agent.py` builds arm64 Linux wheels only (`--only-binary`). Pin a version of the named package that publishes an arm64 wheel in `requirements-runtime.txt`.
 
-**The Runtime starts but calls fail.** Check the runtime's CloudWatch log group (`/aws/bedrock-agentcore/runtimes/fernbrook_ops_agent-*`). If startup fails on `opentelemetry-instrument`, change `entry_point` in `infrastructure/release/runtime.tf` to `["app.py"]`.
+**The Runtime starts but calls fail** (the smoke test reports `RuntimeClientError ... (500)`). Check the runtime's CloudWatch log group (`/aws/bedrock-agentcore/runtimes/fernbrook_ops_agent-*`); the error is in a `Traceback` near `Invocation failed`:
+
+```bash
+LG=$(aws logs describe-log-groups --log-group-name-prefix /aws/bedrock-agentcore/runtimes/ --query 'logGroups[0].logGroupName' --output text)
+aws logs tail "$LG" --since 1h --format short --filter-pattern '?Traceback ?Exception ?ERROR' | grep -v 'export span' | tail -40
+```
+
+On Windows, set `MSYS2_ARG_CONV_EXCL='*'` and `PYTHONUTF8=1` first (Phase 1.2). If startup fails on `opentelemetry-instrument`, change `entry_point` in `infrastructure/release/runtime.tf` to `["app.py"]`.
 
 **`terraform init` on your laptop complains about credentials after `aws login`.** Use provider 6.23 or newer (this repository does), keep `credential_process` out of the default profile, and as a fallback run `eval "$(aws configure export-credentials --format env)"` for that shell.
 

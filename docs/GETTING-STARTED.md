@@ -64,6 +64,16 @@ aws sts get-caller-identity
 
 `aws login` sessions expire (up to 12 hours). When commands start failing with credential errors, run `aws login` again.
 
+**On Windows (Git Bash or MSYS2),** three settings avoid confusing errors later:
+
+```bash
+python -m pip install "botocore[crt]"   # Python scripts need it to read aws login sessions
+export MSYS2_ARG_CONV_EXCL='*'           # stop MSYS2 rewriting /aws/... and /fernbrook/... into Windows paths (Git Bash: MSYS_NO_PATHCONV=1)
+export PYTHONUTF8=1                      # the AWS CLI otherwise crashes printing some log characters
+```
+
+With path conversion off, the Windows AWS CLI cannot see `/tmp`. Write output files to the current folder instead.
+
 Terraform's AWS provider 6.23 or newer reads `aws login` sessions directly. Do **not** add a `credential_process` line to your default profile: that stops `aws login` from working.
 
 **Use an account you can safely experiment in.** This guide creates IAM roles and a permissions boundary. Prefer a personal or sandbox account. Do not use the root user for daily work.
@@ -83,7 +93,10 @@ aws bedrock-runtime converse \
 **Check:** it prints a short greeting.
 
 **If it fails:**
-- `AccessDeniedException` mentioning Marketplace or a subscription: open the Amazon Bedrock console, go to the model catalog, open Claude Sonnet 4.6, and complete any access or use-case prompt. Then retry.
+- `ResourceNotFoundException: Model use case details have not been submitted`: Anthropic requires a one-time use-case form per AWS account. Complete it from the Anthropic page under **Providers** in the Bedrock console (`us-east-1`), wait a few minutes, and retry.
+- `AccessDeniedException` mentioning `aws-marketplace:Subscribe`: the account has no Marketplace subscription for the model yet. The first successful call from an identity allowed to subscribe creates it. Your admin user is allowed; the agent's runtime role deliberately is not. Retry this command, or send one message in the Bedrock playground, until it replies.
+
+**Do not skip this check.** It is the one setup step Terraform cannot do for you. If you skip it, everything deploys and the smoke test fails at the first model call.
 - `ValidationException` or "model not found": the model ID may have changed. Check the Bedrock model catalog for the current Claude ID and pass it later as `model_id` (see Phase 4).
 - Models have a lifecycle (Active, Legacy, end of life). AWS states that new customers cannot start using Legacy models. This is why the repository does not default to an older model.
 
@@ -158,6 +171,13 @@ cp terraform.tfvars.example terraform.tfvars
 ```
 
 Edit `terraform.tfvars` (it is gitignored). Set `github_owner` to your GitHub username, `github_repo` to `fernbrook-ops-agent`, and optionally `budget_email` to get a cost alert.
+
+Then add your repository's numeric IDs. GitHub puts them in the OIDC token it sends to AWS (`repo:OWNER@OWNER_ID/REPO@REPO_ID:...`), and the role trust policies must match. The repository must exist first (Phase 1.5):
+
+```bash
+gh api repos/YOUR-GITHUB-USERNAME/fernbrook-ops-agent --jq '"github_owner_id = \"\(.owner.id)\"", "github_repo_id  = \"\(.id)\""' >> terraform.tfvars
+tail -2 terraform.tfvars
+```
 
 ```bash
 terraform init
@@ -284,12 +304,14 @@ aws ssm get-parameter --name /fernbrook/release/last_good_key --query Parameter.
 ### 6.1 Talk to your agent
 
 ```bash
-pip install boto3 "python-jose[cryptography]"     # once, if you skipped the local venv
+pip install boto3 "botocore[crt]" "python-jose[cryptography]"     # once, if you skipped the local venv
 python scripts/chat.py "What is the status of order FB-10293?"
 python scripts/chat.py "What is the status of order FB-10318 and what is in it?"
 ```
 
 The first order belongs to the demo customer and should come back as shipped. The second belongs to someone else and should be refused. The code, not the model, makes that decision.
+
+Read the refusal closely. On the first deployment the model added that the order "may be associated with a different account", although the prompt tells it not to speculate. Nothing leaked, because the code returns the same `found: false` for someone else's order as for one that does not exist. That is the point of keeping authorization in code: the model does not always follow the prompt.
 
 For a conversation: `python scripts/chat.py`.
 
@@ -350,19 +372,37 @@ If you only ran the Destroy workflow and kept the bootstrap stack, start at Phas
 
 ## Known unknowns
 
-Honest list of things the author could not verify before handing this to you. Each has an obvious fix; none are hidden.
+Status after the first end-to-end deployment (November 2026, AWS provider 6.72.0, Terraform 1.16).
 
-| Area | What is unverified | If it bites |
+| Area | Status | If it bites |
 |---|---|---|
-| Terraform code | Not run end to end. Written from provider documentation (AWS provider 6.72 line). | Fix the error in the named `.tf` file. Phase 1.4 catches schema mistakes early. |
-| Provider version floor | The lowest provider version with the AgentCore Runtime `code_configuration` block is not confirmed. | Raise the `version` constraint in the `versions.tf` files. |
-| Runtime start command | `opentelemetry-instrument app.py` as the entry point. | Use `["app.py"]` (you lose automatic tracing, not function). |
-| arm64 dependencies | Whether every pinned wheel has an arm64 build. | Pin a version that does. |
-| Gateway tool names | The agent resolves Gateway tool names (`Target___tool`) at run time; not checked against a live Gateway. | Run `list_tools` against the Gateway and compare. |
-| Cedar validation | The policy engine runs with `validation_mode = IGNORE_ALL_FINDINGS`, which skips only the semantic checks. The schema check always runs, so the policy names only the deployed order-lookup tool. | Try `FAIL_ON_ANY_FINDINGS` once the apply is green; add the wholesale and knowledge actions together with their targets. |
-| Infra role breadth | `bedrock-agentcore:*` is deliberately broad on the infra role. | After a few applies, tighten it using CloudTrail or IAM Access Analyzer. |
+| Terraform code | Deployed end to end. The first-run fixes are in [What broke on the first deploy](#what-broke-on-the-first-deploy). | Fix the error in the named `.tf` file. |
+| Provider version floor | Works on 6.72.0. Lower versions are not tested. | Keep the `~> 6.72` constraint. |
+| Runtime start command | `opentelemetry-instrument app.py` works. | Nothing to do. |
+| arm64 dependencies | Every pinned package builds for arm64 (about 47 MB zip). | Pin a version with an arm64 wheel. |
+| Gateway tool names | Confirmed against a live Gateway: Cedar accepts `OrderLookup___get_order_status` and the agent resolves it at run time. | Nothing to do. |
+| Cedar validation | The policy engine runs with `validation_mode = IGNORE_ALL_FINDINGS`, which skips only the semantic checks. The schema check always runs, so the policy names only the deployed order-lookup tool. | Try `FAIL_ON_ANY_FINDINGS`; add the wholesale and knowledge actions together with their targets. |
+| Infra role breadth | `bedrock-agentcore:*` is deliberately broad on the infra role. | Tighten it using CloudTrail or IAM Access Analyzer. |
 | Model | Sonnet 4.6 was chosen because Sonnet 5.5 and Haiku 5.5 showed `agreementAvailability: NOT_AVAILABLE` on the author's account. It is Active, with end of life no sooner than 2027-02-17, so a redeploy after that date needs a newer model. | Set a different `model_id`; if you pick a pre-5 model, you may set `FERNBROOK_TEMPERATURE`. |
-| Auth | Terraform using `aws login` sessions locally. | Use the `export-credentials` fallback in Phase 2. |
+| Auth | Terraform reads `aws login` sessions directly. Python scripts need `botocore[crt]`. | `pip install "botocore[crt]"`. |
+
+---
+
+## What broke on the first deploy
+
+The repository was written from documentation and then deployed for the first time. These are the failures, in the order they appeared. All are fixed in the code; the account-level step (6) is in Phase 1.3.
+
+| # | Symptom | Cause | Fix |
+|---|---|---|---|
+| 1 | Infra Apply: `Not authorized to perform sts:AssumeRoleWithWebIdentity` | GitHub now sends an immutable OIDC subject with numeric IDs: `repo:OWNER@OWNER_ID/REPO@REPO_ID:environment:NAME`. The trust policies expected names only. | `github_owner_id` and `github_repo_id` in bootstrap. Found by reading the failed event in CloudTrail. |
+| 2 | `aws_bedrockagentcore_policy`: `CREATE_FAILED`, "unrecognized action" | AgentCore Policy checks every action against the attached gateways' schema in every validation mode. The policy named two tools with no target yet. | Name only deployed tools; a test now checks every permitted action has a Gateway target. |
+| 3 | Demo-user script: `AccessDenied` on `ssm:GetParametersByPath` | That call is authorized against the path itself, and the role only allowed `/fernbrook/config/*`. | Grant `/fernbrook/config` as well. |
+| 4 | Packaging: pip `ResolutionImpossible` | `mcp` 2.x pinned, while Strands and AgentCore require `mcp<2`. CI did not install the full requirements, so it passed. | Pin `mcp` 1.30.0; CI now installs `requirements.txt`. |
+| 5 | Release stack: "Failed creating service linked role" | The first AgentCore Runtime in an account creates `AWSServiceRoleForBedrockAgentCoreRuntimeIdentity` as the caller. | Scoped `iam:CreateServiceLinkedRole` on the app-deploy role. |
+| 6 | Smoke test: Runtime returns 500 on every model call | Anthropic use-case form not submitted, then no Marketplace subscription. Account-level, not code. | Phase 1.3. |
+| 7 | Smoke test: "own order not returned" | The Gateway timeout was passed as the int `10`; the MCP client sends the request, then fails computing the timeout. The tool ran but its result was lost, and a bare `except` turned that into "not found". | `timedelta(seconds=10)`, errors now logged, and a test that rejects numeric timeouts. |
+
+Two habits made each fix fast: read the full error (in CloudWatch for the Runtime, in CloudTrail for IAM), and test each layer on its own (DynamoDB item, direct Lambda invoke, Cognito attribute) before changing code.
 
 ---
 

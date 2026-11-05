@@ -84,6 +84,18 @@ Content filtering, prompt-attack patterns and PII masking at the model boundary.
 - The evaluation suite exists and runs on demand, but is not part of the deployment gate yet. The gate is a three-check smoke test.
 - The Terraform was written from documentation and debugged on first deployment. Be ready to describe what broke and how you fixed it. That is a good story, not a weakness.
 
+## The first-deploy story
+
+Seven failures, each a different layer. Pick two or three and tell them as symptom, how you found the cause, fix, and what now prevents it. The full table is in `docs/GETTING-STARTED.md`.
+
+- **Identity:** GitHub's OIDC token used an immutable subject with numeric IDs. CloudTrail showed the exact subject; the trust policy now pins the IDs, which also stops someone re-creating the repo name from inheriting access.
+- **Policy:** Cedar rejected actions for tools not deployed yet. The schema check always runs. A test now fails if the policy names a tool with no Gateway target.
+- **IAM details:** `GetParametersByPath` is authorized on the path itself, and the first Runtime needs a service-linked role. Both fixed with scoped grants applied by a human from bootstrap, because the pipeline cannot widen its own permissions.
+- **Dependencies:** a pin conflict CI missed because it did not install everything. CI now installs the full requirements.
+- **Account setup:** the model needed a one-time form and a Marketplace subscription. Everything deployed, then the first model call failed. The lesson: any step not in code is what breaks a fresh account.
+- **A silent bug:** the agent said "not found" for an order that existed. Testing each layer alone (DynamoDB, Lambda, Cognito) proved they all worked, which left the client code: a timeout passed as an int, and a bare `except` hiding the crash. Fixed the type, logged the exception, added a test.
+- **Bonus observation:** for another customer's order the model hinted it "may be associated with a different account", against the prompt. Nothing leaked, because the decision is in code. That is the argument for authorization outside the model, shown live.
+
 ## Questions to expect, with a short answer
 
 | Question | Short answer |

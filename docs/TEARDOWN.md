@@ -69,6 +69,8 @@ A day later, glance at **Billing, Cost Explorer** to confirm spend has stopped.
 | Bedrock model access or Marketplace subscription for Claude | Pay-per-use. No usage, no charge. |
 | GitHub secrets and environments | They hold role ARNs that no longer exist. Re-running `scripts/setup_github.sh` after the next bootstrap overwrites them. |
 | CloudTrail history | Read-only record of what happened. |
+| `AWSServiceRoleForBedrockAgentCoreRuntimeIdentity` (service-linked role) | Created by AgentCore with the first Runtime. Free, and reused on redeploy. AWS manages it; you can delete it in IAM once no Runtime exists. |
+| Anthropic use-case form | Account-level and one-time. A redeploy does not need it again. |
 
 ## If the Destroy workflow or the bootstrap state is unavailable
 
