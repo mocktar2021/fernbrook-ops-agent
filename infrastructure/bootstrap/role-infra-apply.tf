@@ -61,10 +61,15 @@ resource "aws_iam_policy" "infra_apply_data" {
         Resource = "*"
       },
       {
-        Sid      = "FernbrookConfigParameters"
-        Effect   = "Allow"
-        Action   = ["ssm:PutParameter", "ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:DeleteParameter", "ssm:DeleteParameters", "ssm:AddTagsToResource", "ssm:RemoveTagsFromResource", "ssm:ListTagsForResource"]
-        Resource = "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/fernbrook/config/*"
+        Sid    = "FernbrookConfigParameters"
+        Effect = "Allow"
+        Action = ["ssm:PutParameter", "ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:DeleteParameter", "ssm:DeleteParameters", "ssm:AddTagsToResource", "ssm:RemoveTagsFromResource", "ssm:ListTagsForResource"]
+        # GetParametersByPath is authorized against the path itself, so the
+        # bare path is listed as well as the parameters under it.
+        Resource = [
+          "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/fernbrook/config",
+          "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/fernbrook/config/*",
+        ]
       },
       {
         Sid      = "DescribeParametersNoResourceScope"
