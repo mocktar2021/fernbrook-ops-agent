@@ -26,7 +26,8 @@ one open connection. See Design Note 12 for why.
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+import logging
+from datetime import datetime, timedelta, timezone
 
 from mcp_proxy_for_aws.client import aws_iam_streamablehttp_client
 from strands import Agent, tool
@@ -42,6 +43,13 @@ from bedrock_agentcore.memory.integrations.strands.session_manager import (
 from refund_logic import request_refund
 from emit_metric import emit_metric
 from gateway_names import resolve_gateway_tool_names, base_tool_name
+
+logger = logging.getLogger(__name__)
+
+# Design Note 31: bound every Gateway round trip. The MCP client expects a
+# timedelta here. A plain int is sent first and then fails when the client
+# computes the timeout, so the tool runs but its result is lost.
+GATEWAY_READ_TIMEOUT = timedelta(seconds=10)
 
 REGION = "us-east-1"
 
@@ -275,12 +283,13 @@ def run_agent(actor_id: str, session_id: str, prompt: str) -> str:
                 tool_use_id=str(uuid.uuid4()),
                 name=_gateway_name("get_order_status"),
                 arguments={"order_id": order_id},
-                read_timeout_seconds=10,  # Design Note 31: bound the Gateway round trip
+                read_timeout_seconds=GATEWAY_READ_TIMEOUT,
             )
         except Exception:
             # Design Note 33: a read failure is safe to surface plainly and
             # safe to retry, unlike a write failure. No ownership
             # ambiguity here either way, since nothing was returned.
+            logger.exception("Gateway call failed: get_order_status")
             emit_metric("LookupToolUnavailable", dimensions={"tool": "get_order_status"})
             return {
                 "found": False,
@@ -310,9 +319,10 @@ def run_agent(actor_id: str, session_id: str, prompt: str) -> str:
                 tool_use_id=str(uuid.uuid4()),
                 name=_gateway_name("getWholesaleAccountStatus"),
                 arguments={"account_id": account_id},
-                read_timeout_seconds=10,
+                read_timeout_seconds=GATEWAY_READ_TIMEOUT,
             )
         except Exception:
+            logger.exception("Gateway call failed: get_wholesale_account_status")
             emit_metric(
                 "LookupToolUnavailable",
                 dimensions={"tool": "get_wholesale_account_status"},
@@ -358,9 +368,10 @@ def run_agent(actor_id: str, session_id: str, prompt: str) -> str:
                 tool_use_id=str(uuid.uuid4()),
                 name=_gateway_name("Retrieve"),
                 arguments={"query": query},
-                read_timeout_seconds=10,
+                read_timeout_seconds=GATEWAY_READ_TIMEOUT,
             )
         except Exception:
+            logger.exception("Gateway call failed: Retrieve")
             emit_metric("RetrievalToolUnavailable")
             return {
                 "found": False,
