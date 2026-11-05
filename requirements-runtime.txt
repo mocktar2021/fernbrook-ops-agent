@@ -11,7 +11,7 @@
 # (September 2026). Check for newer versions before you build.
 
 boto3==1.43.86
-botocore==1.43.86
+botocore==1.43.123
 
 # Design Note 6: the Strands Agents framework. The [otel] extra (Design
 # Note 24) enables Strands' own OpenTelemetry instrumentation, required for
