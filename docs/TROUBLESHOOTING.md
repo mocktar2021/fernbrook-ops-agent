@@ -101,6 +101,8 @@ On Windows, set `MSYS2_ARG_CONV_EXCL='*'` and `PYTHONUTF8=1` first (Phase 1.2). 
 
 ## Evaluation and CI
 
+**The GenAI Observability dashboard shows 0 agents, and the agent's `spans` log stream stays empty.** Spans for a new Runtime go to the agent's own log group, and AgentCore needs the execution role to hold `logs:PutResourcePolicy` on `/aws/bedrock-agentcore/runtimes/<agent>-*` so X-Ray can write there. Without it, spans are dropped with no error. The permission must also be allowed by the permissions boundary. After adding it, redeploy the Runtime (any App Deploy run); the running Runtime did not pick it up on its own.
+
 **`run_evaluations.py` returns no data or empty traces.** Confirm CloudWatch Transaction Search is actually enabled (Design Note 24); it's a one-time, account-level setting that `agentcore deploy` does not turn on for you, and spans can take about ten minutes to become searchable after enabling it.
 
 **`retrieval-failure-knowledge-base-unreachable` fails in `evaluations/dataset.json`.** As of this repository's final completion pass, this should pass; `Retrieve` now has the same graceful-degradation wrapping as the two lookup tools. If you're working from an earlier snapshot of `agent/agent.py`, this is a known, documented gap (see the scenario's own notes in the dataset file), not a new bug.

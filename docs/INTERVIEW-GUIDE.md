@@ -86,7 +86,7 @@ Content filtering, prompt-attack patterns and PII masking at the model boundary.
 
 ## The first-deploy story
 
-Seven failures, each a different layer. Pick two or three and tell them as symptom, how you found the cause, fix, and what now prevents it. The full table is in `docs/GETTING-STARTED.md`.
+Eight failures, each a different layer. Pick two or three and tell them as symptom, how you found the cause, fix, and what now prevents it. The full table is in `docs/GETTING-STARTED.md`.
 
 - **Identity:** GitHub's OIDC token used an immutable subject with numeric IDs. CloudTrail showed the exact subject; the trust policy now pins the IDs, which also stops someone re-creating the repo name from inheriting access.
 - **Policy:** Cedar rejected actions for tools not deployed yet. The schema check always runs. A test now fails if the policy names a tool with no Gateway target.
@@ -94,6 +94,7 @@ Seven failures, each a different layer. Pick two or three and tell them as sympt
 - **Dependencies:** a pin conflict CI missed because it did not install everything. CI now installs the full requirements.
 - **Account setup:** the model needed a one-time form and a Marketplace subscription. Everything deployed, then the first model call failed. The lesson: any step not in code is what breaks a fresh account.
 - **A silent bug:** the agent said "not found" for an order that existed. Testing each layer alone (DynamoDB, Lambda, Cognito) proved they all worked, which left the client code: a timeout passed as an int, and a bare `except` hiding the crash. Fixed the type, logged the exception, added a test.
+- **Observability that failed silently:** after the deploy was green, traces never appeared. No error anywhere. Narrowing it down (the stream existed, nothing in it, nothing in the shared group) led to a missing `logs:PutResourcePolicy` in the documented execution-role policy. Lesson: a monitoring gap does not page you; check that the telemetry exists, not just that the app works.
 - **Bonus observation:** for another customer's order the model hinted it "may be associated with a different account", against the prompt. Nothing leaked, because the decision is in code. That is the argument for authorization outside the model, shown live.
 
 ## Questions to expect, with a short answer

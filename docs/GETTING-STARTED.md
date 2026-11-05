@@ -323,7 +323,17 @@ Lambda logs for the tool call:
 aws logs tail /aws/lambda/fernbrook-order-lookup --since 15m
 ```
 
-For traces of the model and tool calls, enable **CloudWatch Transaction Search** once per account (CloudWatch console, Settings, Transaction Search; it can take about ten minutes before spans are searchable). Then open the GenAI observability area of CloudWatch and find the `fernbrook-ops-agent` service.
+For traces of the model and tool calls, enable **CloudWatch Transaction Search** once per account (CloudWatch console, Application Signals, Transaction search; tick "ingest spans as structured logs"). Spans take about ten minutes to become searchable. Then open **CloudWatch, GenAI Observability, Bedrock AgentCore** and look at the Runtime tab and **All sessions**.
+
+Check that spans are being written, reading the stream itself (`lastEventTimestamp` lags):
+
+```bash
+LG=$(aws logs describe-log-groups --log-group-name-prefix /aws/bedrock-agentcore/runtimes/ --query 'logGroups[0].logGroupName' --output text)
+aws logs filter-log-events --log-group-name "$LG" --log-stream-names spans \
+  --start-time $(( ($(date +%s) - 1800) * 1000 )) --max-items 2 --query 'events[].timestamp' --output text
+```
+
+Timestamps mean spans are flowing. Nothing means the runtime role cannot authorize span delivery to its log group; see TROUBLESHOOTING.
 
 ### 6.3 Break it on purpose
 
@@ -390,7 +400,7 @@ Status after the first end-to-end deployment (November 2026, AWS provider 6.72.0
 
 ## What broke on the first deploy
 
-The repository was written from documentation and then deployed for the first time. These are the failures, in the order they appeared. All are fixed in the code; the account-level step (6) is in Phase 1.3.
+The repository was written from documentation and then deployed for the first time. These are the failures, in the order they appeared, including one found after the first green deploy. All are fixed in the code; the account-level step (6) is in Phase 1.3.
 
 | # | Symptom | Cause | Fix |
 |---|---|---|---|
@@ -401,6 +411,7 @@ The repository was written from documentation and then deployed for the first ti
 | 5 | Release stack: "Failed creating service linked role" | The first AgentCore Runtime in an account creates `AWSServiceRoleForBedrockAgentCoreRuntimeIdentity` as the caller. | Scoped `iam:CreateServiceLinkedRole` on the app-deploy role. |
 | 6 | Smoke test: Runtime returns 500 on every model call | Anthropic use-case form not submitted, then no Marketplace subscription. Account-level, not code. | Phase 1.3. |
 | 7 | Smoke test: "own order not returned" | The Gateway timeout was passed as the int `10`; the MCP client sends the request, then fails computing the timeout. The tool ran but its result was lost, and a bare `except` turned that into "not found". | `timedelta(seconds=10)`, errors now logged, and a test that rejects numeric timeouts. |
+| 8 | Traces: dashboards empty, the agent's `spans` log stream never written | New Runtimes send spans to the agent's own log group, which needs `logs:PutResourcePolicy` on it. The runtime role lacked it, so spans were dropped silently. | Scoped grant on the runtime role and the boundary. The Runtime used it only after its next redeploy. |
 
 Two habits made each fix fast: read the full error (in CloudWatch for the Runtime, in CloudTrail for IAM), and test each layer on its own (DynamoDB item, direct Lambda invoke, Cognito attribute) before changing code.
 
