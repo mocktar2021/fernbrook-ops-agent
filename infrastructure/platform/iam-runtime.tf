@@ -29,6 +29,14 @@ resource "aws_iam_role_policy" "agent_runtime" {
         Resource = "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:/aws/bedrock-agentcore/runtimes/*"
       },
       {
+        # Spans go to the agent's own log group. AgentCore uses this to allow
+        # X-Ray to write there. Without it, spans are silently dropped.
+        Sid      = "AgentSpanDelivery"
+        Effect   = "Allow"
+        Action   = ["logs:PutResourcePolicy"]
+        Resource = "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:/aws/bedrock-agentcore/runtimes/fernbrook_ops_agent-*"
+      },
+      {
         Sid      = "DescribeLogGroups"
         Effect   = "Allow"
         Action   = ["logs:DescribeLogGroups"]

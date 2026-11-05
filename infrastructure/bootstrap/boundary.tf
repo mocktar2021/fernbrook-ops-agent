@@ -15,6 +15,14 @@ data "aws_iam_policy_document" "boundary" {
   }
 
   statement {
+    # AgentCore lets X-Ray deliver the agent's spans into the agent's own
+    # log group. Only the Fernbrook agent's runtime log groups.
+    sid       = "AgentSpanDelivery"
+    actions   = ["logs:PutResourcePolicy"]
+    resources = ["arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:/aws/bedrock-agentcore/runtimes/fernbrook_ops_agent-*"]
+  }
+
+  statement {
     sid       = "Tracing"
     actions   = ["xray:PutTraceSegments", "xray:PutTelemetryRecords", "xray:GetSamplingRules", "xray:GetSamplingTargets"]
     resources = ["*"]
