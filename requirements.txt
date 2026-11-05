@@ -21,7 +21,7 @@ strands-agents[otel]==1.54.0
 bedrock-agentcore[strands-agents]==1.22.0
 
 # Design Note 12: the MCP Python SDK, for connecting to AgentCore Gateway.
-mcp==2.1.1
+mcp==1.30.0
 
 # Design Note 15: SigV4-signed Gateway connections and Cognito JWT
 # verification, closing the two identity gaps named in Design Note 14.
