@@ -1,0 +1,16 @@
+[
+  {
+    "name": "get_order_status",
+    "description": "Look up the current status of a Fernbrook order by its order ID. Returns the order's status, type (retail or wholesale), order date, estimated delivery date, and item summary. Returns found: false if no order matches the given ID. This is a read-only lookup; it cannot modify an order.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "description": "The Fernbrook order ID to look up, for example FB-10293."
+        }
+      },
+      "required": ["order_id"]
+    }
+  }
+]

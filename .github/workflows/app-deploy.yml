@@ -1,0 +1,134 @@
+name: App Deploy
+
+# Ships a new version of the AGENT (not the platform):
+#   test -> package (arm64) -> upload to S3 -> Terraform release stack
+#   -> smoke test -> promote to "last good", or roll back automatically.
+#
+# Passing unit tests is necessary but not sufficient. A release is only
+# promoted if the deployed agent also passes the smoke test (bad token
+# rejected, own order returned, another customer's order not leaked).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - "identity/verify_customer_token.py"
+      - "identity/get_test_token.py"
+      - "requirements.txt"
+      - "requirements-runtime.txt"
+      - "scripts/package_agent.py"
+      - "scripts/smoke_test.py"
+      - "infrastructure/release/**"
+      - ".github/workflows/app-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: app-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install pytest boto3 "python-jose[cryptography]==3.5.0"
+      - run: python -m pytest -q tests
+
+  deploy:
+    name: Deploy, verify, promote or roll back
+    needs: test
+    runs-on: ubuntu-latest
+    environment: app-dev # approval gate + the only environment that may assume the app-deploy role
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~> 1.10"
+          terraform_wrapper: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Build the arm64 deployment package
+        run: |
+          python -m pip install --quiet --upgrade pip
+          python scripts/package_agent.py --python-version 3.13
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Find the code bucket (written by the platform stack)
+        run: |
+          bucket=$(aws ssm get-parameter --name /fernbrook/config/code_bucket --query Parameter.Value --output text)
+          echo "::add-mask::$bucket"
+          echo "CODE_BUCKET=$bucket" >> "$GITHUB_ENV"
+
+      - name: Upload the package (versioned bucket, one immutable artifact per commit)
+        id: upload
+        run: |
+          key="agent/${GITHUB_SHA}.zip"
+          version=$(aws s3api put-object --bucket "$CODE_BUCKET" --key "$key" --body dist/agent.zip --query VersionId --output text)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Remember the previous good release (for rollback)
+        id: previous
+        run: |
+          key=$(aws ssm get-parameter --name /fernbrook/release/last_good_key --query Parameter.Value --output text 2>/dev/null || true)
+          version=$(aws ssm get-parameter --name /fernbrook/release/last_good_version_id --query Parameter.Value --output text 2>/dev/null || true)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform init (release stack)
+        run: >
+          terraform -chdir=infrastructure/release init -input=false
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="region=us-east-1"
+
+      - name: Terraform apply (release stack)
+        env:
+          TF_VAR_code_key: ${{ steps.upload.outputs.key }}
+          TF_VAR_code_version_id: ${{ steps.upload.outputs.version }}
+        run: terraform -chdir=infrastructure/release apply -auto-approve -input=false -no-color
+
+      - name: Install smoke test dependencies
+        run: pip install boto3
+
+      - name: Smoke test the deployed agent
+        id: smoke
+        continue-on-error: true
+        run: python scripts/smoke_test.py
+
+      - name: Promote to last good
+        if: steps.smoke.outcome == 'success'
+        run: |
+          aws ssm put-parameter --name /fernbrook/release/last_good_key --type String --overwrite --value "${{ steps.upload.outputs.key }}"
+          aws ssm put-parameter --name /fernbrook/release/last_good_version_id --type String --overwrite --value "${{ steps.upload.outputs.version }}"
+
+      - name: Roll back to the previous good release
+        id: rollback
+        if: steps.smoke.outcome == 'failure' && steps.previous.outputs.key != ''
+        env:
+          TF_VAR_code_key: ${{ steps.previous.outputs.key }}
+          TF_VAR_code_version_id: ${{ steps.previous.outputs.version }}
+        run: terraform -chdir=infrastructure/release apply -auto-approve -input=false -no-color
+
+      - name: Fail the run if the smoke test failed
+        if: steps.smoke.outcome == 'failure'
+        run: |
+          if [ -n "${{ steps.previous.outputs.key }}" ]; then
+            echo "Smoke test failed. Rolled back to ${{ steps.previous.outputs.key }}."
+          else
+            echo "Smoke test failed and there is no previous good release to roll back to (first deploy)."
+          fi
+          exit 1

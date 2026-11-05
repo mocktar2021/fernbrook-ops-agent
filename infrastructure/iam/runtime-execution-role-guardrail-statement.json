@@ -1,0 +1,13 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ApplyFernbrookGuardrail",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:ApplyGuardrail"
+      ],
+      "Resource": "arn:aws:bedrock:us-east-1:*:guardrail/REPLACE_WITH_YOUR_GUARDRAIL_ID"
+    }
+  ]
+}

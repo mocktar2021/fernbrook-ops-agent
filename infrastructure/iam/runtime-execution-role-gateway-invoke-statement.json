@@ -1,0 +1,13 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InvokeFernbrookGateway",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:InvokeGateway"
+      ],
+      "Resource": "arn:aws:bedrock-agentcore:us-east-1:*:gateway/REPLACE_WITH_YOUR_GATEWAY_ID"
+    }
+  ]
+}

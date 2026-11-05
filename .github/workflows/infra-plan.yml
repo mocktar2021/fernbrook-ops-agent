@@ -1,0 +1,54 @@
+name: Infra Plan
+
+# Shows what a pull request WOULD change in AWS, before anything is merged.
+# Runs as the read-only plan role: it can look at the account and the state
+# file but cannot create, change or delete anything, so even a malicious
+# change to this workflow could only read.
+on:
+  pull_request:
+    paths:
+      - "infrastructure/platform/**"
+      - "policy/**"
+      - "tools/**"
+      - ".github/workflows/infra-plan.yml"
+
+permissions:
+  contents: read
+  id-token: write # request the OIDC token used to assume the plan role
+
+concurrency:
+  group: infra-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Terraform plan (platform)
+    # Fork PRs get no secrets and no OIDC access, so they are skipped.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~> 1.10"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Init
+        run: >
+          terraform -chdir=infrastructure/platform init -input=false
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="region=us-east-1"
+      - name: Plan
+        # -lock=false: this role is read-only and cannot write the lock object.
+        run: terraform -chdir=infrastructure/platform plan -input=false -lock=false -no-color -out=tfplan
+      - name: Summarize plan
+        run: |
+          {
+            echo '### Terraform plan (platform)'
+            echo '```'
+            terraform -chdir=infrastructure/platform show -no-color tfplan | head -c 60000
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

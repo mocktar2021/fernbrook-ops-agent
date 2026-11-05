@@ -1,0 +1,60 @@
+name: CI
+
+# Fast, credential-free checks on every pull request and every push to main.
+# Nothing here can touch AWS: no role is assumed.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-tests:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install test dependencies
+        run: pip install pytest boto3 "python-jose[cryptography]==3.5.0"
+      - name: Run tests
+        run: python -m pytest -q tests
+
+  terraform-checks:
+    name: Terraform ${{ matrix.stack }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [bootstrap, platform, release]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~> 1.10"
+          terraform_wrapper: false
+      - name: Format check
+        run: terraform fmt -check -recursive -diff infrastructure/${{ matrix.stack }}
+      - name: Init (no backend, no credentials)
+        run: terraform -chdir=infrastructure/${{ matrix.stack }} init -backend=false -input=false
+      - name: Validate
+        run: terraform -chdir=infrastructure/${{ matrix.stack }} validate
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

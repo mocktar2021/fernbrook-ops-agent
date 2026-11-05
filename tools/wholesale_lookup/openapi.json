@@ -1,0 +1,56 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Fernbrook Wholesale Account Lookup",
+    "description": "Look up a Fernbrook wholesale partner account by account ID.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://REPLACE-WITH-YOUR-FUNCTION-URL-HOST"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "getWholesaleAccountStatus",
+        "summary": "Get the status of a Fernbrook wholesale account.",
+        "description": "Returns a wholesale account's business name, tier, and status (active, pending_approval, or on_hold) given its account ID. Returns found: false if no account matches. Read-only; cannot modify an account.",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "The Fernbrook wholesale account ID, for example CUST-WHS-118."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "found": { "type": "boolean" },
+                    "account_id": { "type": "string" },
+                    "business_name": { "type": "string" },
+                    "tier": { "type": "string" },
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No account found with the given ID."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,87 @@
+name: Destroy
+
+# Tears down EVERYTHING the pipelines created: the agent runtime first, then
+# the platform. Manual only, and you must type the confirmation phrase.
+# It does not remove the bootstrap stack (state bucket + pipeline roles);
+# you do that from your laptop. See docs/TEARDOWN.md.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy-fernbrook" to confirm'
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: destroy
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Check confirmation phrase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify input
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "destroy-fernbrook" ]; then
+            echo "Confirmation phrase did not match. Nothing was destroyed."
+            exit 1
+          fi
+
+  destroy-release:
+    name: Destroy agent runtime
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: app-dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~> 1.10"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Init
+        run: >
+          terraform -chdir=infrastructure/release init -input=false
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="region=us-east-1"
+      - name: Destroy release stack
+        # The variables are required inputs but irrelevant when destroying.
+        run: terraform -chdir=infrastructure/release destroy -auto-approve -input=false -no-color -var code_key=unused -var code_version_id=unused
+      - name: Remove pipeline-written parameters and runtime log groups
+        run: |
+          aws ssm delete-parameters --names /fernbrook/release/last_good_key /fernbrook/release/last_good_version_id >/dev/null || true
+          for group in $(aws logs describe-log-groups --log-group-name-prefix /aws/bedrock-agentcore/runtimes/fernbrook_ops_agent- --query 'logGroups[].logGroupName' --output text); do
+            aws logs delete-log-group --log-group-name "$group"
+          done
+
+  destroy-platform:
+    name: Destroy platform
+    needs: destroy-release
+    runs-on: ubuntu-latest
+    environment: infra-dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~> 1.10"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Init
+        run: >
+          terraform -chdir=infrastructure/platform init -input=false
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="region=us-east-1"
+      - name: Destroy platform stack
+        run: terraform -chdir=infrastructure/platform destroy -auto-approve -input=false -no-color

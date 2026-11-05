@@ -1,0 +1,37 @@
+# Packages shipped inside the Runtime zip (everything except test tooling).
+# Keep in sync with requirements.txt; CI checks that every pin here also
+# appears there. Built for arm64 Linux by scripts/package_agent.py.
+
+# Design Note 4: local development and AWS SDK access only.
+# Later design notes add the Strands framework, the AgentCore SDK, and other
+# packages as each one is introduced. Re-run `pip install -r requirements.txt`
+# after pulling changes from a later design note.
+#
+# Versions below were current on PyPI as of this project's research date
+# (September 2026). Check for newer versions before you build.
+
+boto3==1.43.86
+botocore==1.43.86
+
+# Design Note 6: the Strands Agents framework. The [otel] extra (Design
+# Note 24) enables Strands' own OpenTelemetry instrumentation, required for
+# AgentCore Observability to see model and tool spans, not just
+# Runtime's own session-level telemetry.
+strands-agents[otel]==1.54.0
+
+# Design Note 7: the AgentCore Runtime Python SDK (BedrockAgentCoreApp).
+# Design Note 9 needs the strands-agents extra for the AgentCore Memory
+# session manager integration, so the extra is declared here directly.
+bedrock-agentcore[strands-agents]==1.22.0
+
+# Design Note 12: the MCP Python SDK, for connecting to AgentCore Gateway.
+mcp==2.1.1
+
+# Design Note 15: SigV4-signed Gateway connections and Cognito JWT
+# verification, closing the two identity gaps named in Design Note 14.
+mcp-proxy-for-aws==1.6.5
+python-jose[cryptography]==3.5.0
+
+# Design Note 24: AWS Distro for OpenTelemetry, required alongside the
+# [otel] extra above for AgentCore Observability to see full traces.
+aws-opentelemetry-distro==0.19.0

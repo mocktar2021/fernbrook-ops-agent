@@ -1,0 +1,245 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ViewAndCreateCostBudgets",
+      "Effect": "Allow",
+      "Action": [
+        "budgets:ViewBudget",
+        "budgets:ModifyBudget"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadCostAndUsage",
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage",
+        "ce:GetCostForecast"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SelfIdentityCheck",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser",
+        "iam:ListAttachedUserPolicies"
+      ],
+      "Resource": "arn:aws:iam::*:user/${aws:username}"
+    },
+    {
+      "Sid": "InvokeClaudeOnBedrock",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-5-5",
+        "arn:aws:bedrock:us-east-1:*:inference-profile/us.anthropic.claude-sonnet-5-5"
+      ]
+    },
+    {
+      "Sid": "CreateAndInspectFernbrookMemoryResource",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:CreateMemory",
+        "bedrock-agentcore:GetMemory"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageFernbrookOrdersTable",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DeleteTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:Scan"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:*:table/fernbrook-orders"
+    },
+    {
+      "Sid": "ManageRefundApprovalsTable",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DeleteTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:Scan"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:*:table/fernbrook-refund-approvals"
+    },
+    {
+      "Sid": "ManageRefundIdempotencyTable",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DeleteTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:UpdateTimeToLive",
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:Scan"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:*:table/fernbrook-refund-idempotency"
+    },
+    {
+      "Sid": "ManageOrderLookupLambda",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:DeleteFunction",
+        "lambda:GetFunction",
+        "lambda:UpdateFunctionCode",
+        "lambda:InvokeFunction",
+        "lambda:AddPermission",
+        "lambda:RemovePermission"
+      ],
+      "Resource": "arn:aws:lambda:us-east-1:*:function:fernbrook-order-lookup"
+    },
+    {
+      "Sid": "ManageOrderLookupLambdaExecutionRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/fernbrook-order-lookup-lambda-role"
+    },
+    {
+      "Sid": "ManageWholesaleLookupLambda",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:DeleteFunction",
+        "lambda:GetFunction",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:CreateFunctionUrlConfig",
+        "lambda:GetFunctionUrlConfig",
+        "lambda:DeleteFunctionUrlConfig",
+        "lambda:AddPermission",
+        "lambda:RemovePermission",
+        "lambda:InvokeFunction"
+      ],
+      "Resource": "arn:aws:lambda:us-east-1:*:function:fernbrook-wholesale-lookup"
+    },
+    {
+      "Sid": "ManageWholesaleLookupLambdaExecutionRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/fernbrook-wholesale-lookup-lambda-role"
+    },
+    {
+      "Sid": "ManageFernbrookCustomerPool",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:CreateUserPool",
+        "cognito-idp:CreateUserPoolClient",
+        "cognito-idp:AdminCreateUser",
+        "cognito-idp:AdminSetUserPassword",
+        "cognito-idp:AdminInitiateAuth",
+        "cognito-idp:DescribeUserPool"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadFernbrookOpsMetricsForMonitorAgent",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageFernbrookKnowledgeSourceBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::fernbrook-knowledge-source-*",
+        "arn:aws:s3:::fernbrook-knowledge-source-*/*"
+      ]
+    },
+    {
+      "Sid": "ManageFernbrookVectorStore",
+      "Effect": "Allow",
+      "Action": [
+        "s3vectors:CreateVectorBucket",
+        "s3vectors:CreateIndex",
+        "s3vectors:GetIndex",
+        "s3vectors:QueryVectors"
+      ],
+      "Resource": "arn:aws:s3vectors:us-east-1:*:bucket/fernbrook-kb-vectors*"
+    },
+    {
+      "Sid": "ManageFernbrookKnowledgeBase",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agent:CreateKnowledgeBase",
+        "bedrock-agent:CreateDataSource",
+        "bedrock-agent:StartIngestionJob",
+        "bedrock-agent:GetKnowledgeBase",
+        "bedrock-agent:GetIngestionJob"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageKnowledgeBaseServiceRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:PutRolePolicy",
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/fernbrook-kb-service-role"
+    },
+    {
+      "Sid": "ManageFernbrookGuardrail",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:CreateGuardrail",
+        "bedrock:CreateGuardrailVersion",
+        "bedrock:GetGuardrail"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageWholesaleApiKeySecret",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:*:secret:fernbrook/wholesale-lookup-api-key*"
+    }
+  ]
+}

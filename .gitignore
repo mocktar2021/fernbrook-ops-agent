@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.Python
+build/
+dist/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+.aws/
+
+# Terraform (commit .terraform.lock.hcl; never commit state or real tfvars)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and local scratch
+*.log
+.pytest_cache/
+.coverage
+
+# Packaging output
+dist/
+infrastructure/**/build/

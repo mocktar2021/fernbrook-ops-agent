@@ -1,0 +1,4 @@
+# For running Terraform from your laptop instead of CI. Copy to backend.hcl
+# (gitignored), then:  terraform init -backend-config=backend.hcl
+bucket = "fernbrook-tfstate-<YOUR-ACCOUNT-ID>-us-east-1"
+region = "us-east-1"

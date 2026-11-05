@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "UseFernbrookShortTermMemory",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:CreateEvent",
+        "bedrock-agentcore:GetEvent",
+        "bedrock-agentcore:ListEvents",
+        "bedrock-agentcore:ListActors",
+        "bedrock-agentcore:ListSessions"
+      ],
+      "Resource": "arn:aws:bedrock-agentcore:us-east-1:*:memory/REPLACE_WITH_YOUR_MEMORY_ID"
+    }
+  ]
+}

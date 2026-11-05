@@ -1,0 +1,64 @@
+name: Infra Apply
+
+# Creates or updates the platform stack: data, tools, identity, memory,
+# gateway, policy, guardrail, execution role. Runs only from main, and only
+# after a required reviewer approves the `infra-dev` environment.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/platform/**"
+      - "policy/**"
+      - "tools/**"
+      - "scripts/set_demo_user_password.py"
+      - "identity/get_test_token.py"
+      - ".github/workflows/infra-apply.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-platform
+  cancel-in-progress: false # never interrupt an apply halfway
+
+jobs:
+  apply:
+    name: Terraform apply (platform)
+    runs-on: ubuntu-latest
+    environment: infra-dev # approval gate + the only environment that may assume the infra role
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~> 1.10"
+          terraform_wrapper: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Init
+        run: >
+          terraform -chdir=infrastructure/platform init -input=false
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="region=us-east-1"
+      - name: Plan
+        run: terraform -chdir=infrastructure/platform plan -input=false -no-color -out=tfplan
+      - name: Apply the plan that was just shown
+        run: terraform -chdir=infrastructure/platform apply -input=false -no-color tfplan
+      - name: Install script dependencies
+        run: pip install boto3
+      - name: Ensure demo customer (password goes straight to Secrets Manager)
+        run: python scripts/set_demo_user_password.py
+      - name: Seed synthetic orders
+        run: python tools/order_lookup/seed_data.py
+      - name: Summary
+        run: |
+          {
+            echo '### Platform applied'
+            echo 'Next: run the **App Deploy** workflow to ship the agent.'
+          } >> "$GITHUB_STEP_SUMMARY"
