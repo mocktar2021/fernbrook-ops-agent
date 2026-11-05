@@ -2,6 +2,11 @@
 github_owner = "YOUR-GITHUB-USERNAME"
 github_repo  = "fernbrook-ops-agent"
 
+# GitHub puts these numeric IDs in its OIDC token for newer repositories. Get them with:
+#   gh api repos/YOUR-GITHUB-USERNAME/fernbrook-ops-agent --jq '.owner.id, .id'
+github_owner_id = ""
+github_repo_id  = ""
+
 # Optional: a monthly cost alert email (an alarm, not a cap).
 # budget_email     = "you@example.com"
 # budget_limit_usd = 25

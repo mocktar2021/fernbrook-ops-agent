@@ -5,7 +5,14 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
   region     = var.aws_region
-  repo       = "${var.github_owner}/${var.github_repo}"
+  # The subject prefix GitHub puts in its OIDC token. Repositories on the
+  # immutable format include the numeric owner and repository IDs, which also
+  # protects against someone re-creating a renamed or deleted repo name.
+  repo = (
+    var.github_owner_id != "" && var.github_repo_id != ""
+    ? "${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}"
+    : "${var.github_owner}/${var.github_repo}"
+  )
 
   # S3 bucket names are global; the account ID and region make them unique
   # and recognizable. The code bucket is created by the platform stack; its

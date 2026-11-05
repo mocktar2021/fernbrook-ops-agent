@@ -58,3 +58,31 @@ variable "budget_limit_usd" {
   type        = number
   default     = 25
 }
+
+variable "github_owner_id" {
+  description = <<-EOT
+    Numeric ID of the GitHub account that owns the repository. GitHub puts the
+    owner and repository IDs into the OIDC subject claim of repositories that use
+    its immutable subject format, so the trust policy must match them. Find them with:
+      gh api repos/OWNER/REPO --jq '.owner.id, .id'
+    Leave both IDs empty only if your repository still uses the older name-only format.
+  EOT
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = can(regex("^[0-9]*$", var.github_owner_id))
+    error_message = "github_owner_id must be digits only."
+  }
+}
+
+variable "github_repo_id" {
+  description = "Numeric ID of the GitHub repository. Set together with github_owner_id."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = can(regex("^[0-9]*$", var.github_repo_id)) && ((var.github_repo_id == "") == (var.github_owner_id == ""))
+    error_message = "github_repo_id must be digits only, and must be set together with github_owner_id (both or neither)."
+  }
+}
