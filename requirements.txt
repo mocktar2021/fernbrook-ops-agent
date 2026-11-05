@@ -30,7 +30,7 @@ python-jose[cryptography]==3.5.0
 
 # Design Note 24: AWS Distro for OpenTelemetry, required alongside the
 # [otel] extra above for AgentCore Observability to see full traces.
-aws-opentelemetry-distro==0.19.0
+aws-opentelemetry-distro==0.22.0
 
 # Final completion pass: pytest, for the tests/ suite (Design
 # Notes 26 and 29, plus the identity and policy tests).
