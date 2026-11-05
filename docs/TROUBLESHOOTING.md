@@ -20,6 +20,8 @@ Symptom-first, collected from the failure modes met while building this project.
 
 **`ValidationException` or "model not found" after a long gap.** Models have a lifecycle. AWS states that new customers cannot start using Legacy models, and models reach end of life. Check the Bedrock model catalog for a current Claude ID and set `model_id` in `infrastructure/platform/variables.tf` (or a committed `*.auto.tfvars`), then let Infra Apply run.
 
+**`AccessDeniedException: ... is not available for this account`.** The model is not offered to your account. Run `aws bedrock get-foundation-model-availability --region us-east-1 --model-id <model>`. `agreementAvailability: NOT_AVAILABLE` means the AWS Marketplace agreement for that model is not offered to your account (seen with Claude Sonnet 5.5 and Haiku 5.5 on one account, while Sonnet 4.6 worked). Test other Active models with a direct `converse` call and set `model_id` to one that replies.
+
 **`KeyError: 'text'` or empty replies from your own model code.** Newer models can return a reasoning block before the text block. Collect every block that has a `text` key instead of reading `content[0]`.
 
 ## Gateway, Policy, and tools

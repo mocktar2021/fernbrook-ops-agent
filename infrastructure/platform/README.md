@@ -38,7 +38,7 @@ terraform init -backend-config="bucket=<state bucket>" -backend-config="region=u
 |---|---|---|
 | `aws_region` | `us-east-1` | Must be `us-east-1`; the Python code hardcodes it |
 | `environment` | `dev` | Tag only. Resource names are fixed, so run one environment per AWS account |
-| `model_id` | `us.anthropic.claude-sonnet-5-5` | Passed to the agent through SSM. Check the model is still Active before you redeploy |
+| `model_id` | `us.anthropic.claude-sonnet-4-6` | Passed to the agent through SSM. Check the model is still Active before you redeploy |
 | `memory_event_expiry_days` | `30` | Provider allows 7 to 365 |
 | `log_retention_days` | `14` | |
 

@@ -45,12 +45,12 @@ from gateway_names import resolve_gateway_tool_names, base_tool_name
 
 REGION = "us-east-1"
 
-# Claude Sonnet 5.5 through the US cross-region inference profile. AWS lists it
+# Claude Sonnet 4.6 through the US cross-region inference profile. AWS lists it
 # as Active (checked 2026-11-05). Check the Bedrock model catalog before you
 # build; model IDs have a lifecycle and this one will not last forever.
 # Overridable via FERNBROOK_MODEL_ID (set from Terraform's model_id variable) so a
 # model retirement is a one-line config change, not a code change.
-MODEL_ID = os.environ.get("FERNBROOK_MODEL_ID", "us.anthropic.claude-sonnet-5-5")
+MODEL_ID = os.environ.get("FERNBROOK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
 
 # Claude Sonnet 5 and later reject temperature, top_p and top_k with a 400
 # error, so none is sent by default. Set FERNBROOK_TEMPERATURE only if you switch

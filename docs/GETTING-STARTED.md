@@ -70,12 +70,12 @@ Terraform's AWS provider 6.23 or newer reads `aws login` sessions directly. Do *
 
 ### 1.3 Confirm the model works in your account
 
-The agent uses Claude Sonnet 5.5 through the US cross-region inference profile. Test it directly before involving any pipeline:
+The agent uses Claude Sonnet 4.6 through the US cross-region inference profile. Test it directly before involving any pipeline:
 
 ```bash
 aws bedrock-runtime converse \
   --region us-east-1 \
-  --model-id us.anthropic.claude-sonnet-5-5 \
+  --model-id us.anthropic.claude-sonnet-4-6 \
   --messages '[{"role":"user","content":[{"text":"Say hello in five words."}]}]' \
   --query 'output.message.content[].text' --output text
 ```
@@ -83,7 +83,7 @@ aws bedrock-runtime converse \
 **Check:** it prints a short greeting.
 
 **If it fails:**
-- `AccessDeniedException` mentioning Marketplace or a subscription: open the Amazon Bedrock console, go to the model catalog, open Claude Sonnet 5.5, and complete any access or use-case prompt. Then retry.
+- `AccessDeniedException` mentioning Marketplace or a subscription: open the Amazon Bedrock console, go to the model catalog, open Claude Sonnet 4.6, and complete any access or use-case prompt. Then retry.
 - `ValidationException` or "model not found": the model ID may have changed. Check the Bedrock model catalog for the current Claude ID and pass it later as `model_id` (see Phase 4).
 - Models have a lifecycle (Active, Legacy, end of life). AWS states that new customers cannot start using Legacy models. This is why the repository does not default to an older model.
 
@@ -361,7 +361,7 @@ Honest list of things the author could not verify before handing this to you. Ea
 | Gateway tool names | The agent resolves Gateway tool names (`Target___tool`) at run time; not checked against a live Gateway. | Run `list_tools` against the Gateway and compare. |
 | Cedar validation | The policy engine runs with `validation_mode = IGNORE_ALL_FINDINGS` because the wholesale and knowledge actions have no deployed targets. | Switch to `FAIL_ON_ANY_FINDINGS` once those targets exist. |
 | Infra role breadth | `bedrock-agentcore:*` is deliberately broad on the infra role. | After a few applies, tighten it using CloudTrail or IAM Access Analyzer. |
-| Model | Sonnet 5.5 with the Strands version pinned in `requirements.txt` (adaptive thinking returns extra content blocks). | Set a different `model_id`; if you pick a pre-5 model, you may set `FERNBROOK_TEMPERATURE`. |
+| Model | Sonnet 4.6 was chosen because Sonnet 5.5 and Haiku 5.5 showed `agreementAvailability: NOT_AVAILABLE` on the author's account. It is Active, with end of life no sooner than 2027-02-17, so a redeploy after that date needs a newer model. | Set a different `model_id`; if you pick a pre-5 model, you may set `FERNBROOK_TEMPERATURE`. |
 | Auth | Terraform using `aws login` sessions locally. | Use the `export-credentials` fallback in Phase 2. |
 
 ---

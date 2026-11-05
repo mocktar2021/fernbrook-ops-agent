@@ -15,7 +15,7 @@ REGION = "us-east-1"
 # or `aws bedrock list-foundation-models`) before you run this. Bedrock's
 # Claude lineup has moved forward since this project was written, and a newer
 # Sonnet or Opus model may be a better default by the time you read this.
-MODEL_ID = "us.anthropic.claude-sonnet-5-5"
+MODEL_ID = "us.anthropic.claude-sonnet-4-6"
 
 
 def call_model(prompt: str) -> str:

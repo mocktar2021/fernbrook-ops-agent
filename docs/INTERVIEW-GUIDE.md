@@ -66,7 +66,7 @@ Deployments change a real account. The environment is restricted to `main` and r
 A refund is a write action, the riskiest kind. Small refunds auto-approve under a threshold; larger ones are queued for human approval. An idempotency record keyed on actor, order, amount and reason within a short window stops a retry from refunding twice. It is a documented trade-off: the caller is a model, so it cannot hold a client-generated idempotency token.
 
 **Why did you change the model?**
-AWS models move through Active, Legacy and end-of-life stages, and new accounts cannot start using Legacy models. I checked the lifecycle documentation before deploying, moved to a model listed as Active, and made the model ID a configuration value so retirement is a one-line change, not a code change. The newer model also rejects `temperature`, so the code no longer sends it.
+AWS models move through Active, Legacy and end-of-life stages, and new accounts cannot start using Legacy models. I checked the lifecycle documentation, moved off a Legacy model to an Active one, and then found that the newest generation was not offered to my account at all: `get-foundation-model-availability` reported the Marketplace agreement as NOT_AVAILABLE. So I tested what the account could actually call, chose Claude Sonnet 4.6, and kept the model ID as configuration so changing it is a one-line change, not a code change. The code sends no sampling parameters, so it also works on newer models that reject them.
 
 **Why Strands?**
 It is one of the frameworks the AgentCore documentation supports, it is small, and it keeps the agent loop readable. The architecture does not depend on it: AgentCore Runtime hosts any framework.

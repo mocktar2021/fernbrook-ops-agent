@@ -28,7 +28,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 
 REGION = "us-east-1"
-MODEL_ID = "us.anthropic.claude-sonnet-5-5"
+MODEL_ID = "us.anthropic.claude-sonnet-4-6"
 METRICS_NAMESPACE = "FernbrookOpsAgent"
 
 cloudwatch = boto3.client("cloudwatch", region_name=REGION)

@@ -18,15 +18,15 @@ variable "environment" {
 variable "model_id" {
   description = <<-EOT
     Bedrock model or inference-profile ID the agent calls. Passed to the
-    agent as FERNBROOK_MODEL_ID. Claude Sonnet 5.5 was listed as Active by
-    AWS on 2026-11-05 (end of life no sooner than 2027-09-28). Models have
+    agent as FERNBROOK_MODEL_ID. Claude Sonnet 4.6 was listed as Active by
+    AWS on 2026-11-05 (end of life no sooner than 2027-02-17). Models have
     a lifecycle and new accounts cannot start using Legacy ones, so before
     you redeploy months from now, check the Bedrock model catalog and set a
     current model here. The agent sends no temperature/top_p/top_k, because
     Sonnet 5 and later models reject them.
   EOT
   type        = string
-  default     = "us.anthropic.claude-sonnet-5-5"
+  default     = "us.anthropic.claude-sonnet-4-6"
 }
 
 variable "memory_event_expiry_days" {

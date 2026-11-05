@@ -24,7 +24,7 @@ A customer asks about an order. The agent:
 flowchart LR
     U["Customer app"] -->|"Cognito ID token"| R["AgentCore Runtime<br/>Strands agent"]
     R -->|"verify token"| C["Cognito user pool"]
-    R --> MD["Bedrock model<br/>Claude Sonnet 5.5"]
+    R --> MD["Bedrock model<br/>Claude Sonnet 4.6"]
     R --> GR["Bedrock Guardrail"]
     R --> MEM["AgentCore Memory"]
     R -->|"SigV4"| GW["AgentCore Gateway"]

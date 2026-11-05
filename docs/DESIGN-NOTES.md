@@ -50,4 +50,4 @@ Notes 39 to 41 covered next projects, careers and a learning roadmap; they have 
 Two things have changed since some of those notes were written, so comments that cite them may be out of date:
 
 - **Deployment.** Early notes describe setting AgentCore resources up with the CLI and scripts. The Terraform stacks and GitHub Actions workflows now do that. The old scripts remain for reference and are marked as such at the top of their READMEs.
-- **Model.** Early notes use Claude Sonnet 4.5. The project now defaults to Claude Sonnet 5.5 because Sonnet 4.5 entered AWS's Legacy stage, and the newer model does not accept `temperature`.
+- **Model.** Early notes use Claude Sonnet 4.5. The project now defaults to Claude Sonnet 4.6 because Sonnet 4.5 entered AWS's Legacy stage. Sonnet 5.5 is the better long-term choice but was not offered to the author's account (its Marketplace agreement showed NOT_AVAILABLE). The agent sends no sampling parameters, so it also runs on Sonnet 5.x.
