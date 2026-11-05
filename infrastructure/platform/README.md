@@ -46,7 +46,7 @@ terraform init -backend-config="bucket=<state bucket>" -backend-config="region=u
 
 - IAM roles are eventually consistent, so a short `time_sleep` sits between the roles and the Gateway. If an apply fails complaining that a role cannot be assumed, run it again.
 - The Cedar policy is templated: `policy/fernbrook-tool-access.cedar` contains a placeholder that Terraform replaces with the Gateway's ARN.
-- The policy engine uses `validation_mode = "IGNORE_ALL_FINDINGS"` because the policy names actions for targets that are not deployed yet. Switch to `FAIL_ON_ANY_FINDINGS` once they exist.
+- The Cedar file may only name tools whose Gateway targets exist. AgentCore Policy checks every action against the attached gateways' schema in every validation mode, and a policy naming a missing tool ends in `CREATE_FAILED`. Milestone 2 adds the wholesale and knowledge actions together with their targets. `validation_mode = "IGNORE_ALL_FINDINGS"` skips only the semantic checks; try `FAIL_ON_ANY_FINDINGS` once the apply is green.
 
 ## Permissions
 

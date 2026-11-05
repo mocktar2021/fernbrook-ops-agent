@@ -24,12 +24,13 @@ resource "aws_bedrockagentcore_policy" "tool_access" {
   description      = "Permit the agent's execution role to call the approved Gateway tools. Everything else is denied."
   policy_engine_id = aws_bedrockagentcore_policy_engine.agent.policy_engine_id
 
-  # The Cedar file also permits the wholesale and knowledge-base tools, whose
-  # Gateway targets are not deployed in this milestone. Strict validation
-  # would reject a permit for an action that does not exist yet, so findings
-  # are ignored here. A permit for a missing tool grants nothing: default-deny
-  # still applies. When those targets are added, switch this to
-  # FAIL_ON_ANY_FINDINGS so the policy is checked against the real schema.
+  # AgentCore Policy always checks every action in the statement against the
+  # schema of the gateways attached to the policy engine, in every validation
+  # mode, so the Cedar file may only name tools whose Gateway targets exist
+  # (tests/test_cedar_policy_structure.py enforces that). IGNORE_ALL_FINDINGS
+  # skips only the semantic analysis (overly permissive or overly restrictive
+  # findings). Try FAIL_ON_ANY_FINDINGS once the apply is green; it has not
+  # been tried against this policy.
   validation_mode = "IGNORE_ALL_FINDINGS"
 
   definition {

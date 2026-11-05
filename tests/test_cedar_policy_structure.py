@@ -25,15 +25,50 @@ POLICY_PATH = (
 # file's permitted actions ever drift apart, either a real tool call
 # will be silently denied, or a tool was added to Gateway without a
 # matching permit statement, exactly Design Note 16's default-deny warning.
+#
+# Milestone 2 adds WholesaleAccountLookup___getWholesaleAccountStatus and
+# PolicyKnowledge___Retrieve here and to the Cedar file, together with their
+# Gateway targets. AgentCore Policy rejects a policy that names an action no
+# attached gateway defines, so they must not be listed earlier.
 EXPECTED_ACTIONS = {
     'AgentCore::Action::"OrderLookup___get_order_status"',
-    'AgentCore::Action::"WholesaleAccountLookup___getWholesaleAccountStatus"',
-    'AgentCore::Action::"PolicyKnowledge___Retrieve"',
 }
 
 
 def _read_policy() -> str:
     return POLICY_PATH.read_text()
+
+
+def test_every_permitted_action_has_a_gateway_target_in_terraform():
+    """AgentCore Policy checks each action against the schema of the gateways
+    attached to the policy engine in every validation mode, and rejects the
+    policy (CREATE_FAILED) if an action has no matching target. Catch that
+    here instead of in the middle of an apply.
+    """
+    import re
+
+    active = "\n".join(
+        line for line in _read_policy().splitlines()
+        if not line.lstrip().startswith("//")
+    )
+    actions = re.findall(r'AgentCore::Action::"([^"]+)"', active)
+    assert actions, "No actions found in the Cedar policy."
+
+    platform_dir = POLICY_PATH.parent.parent / "infrastructure" / "platform"
+    terraform = "\n".join(p.read_text() for p in platform_dir.glob("*.tf"))
+    targets = set(
+        re.findall(
+            r'resource "aws_bedrockagentcore_gateway_target" "[^"]+" \{\s*name\s*=\s*"([^"]+)"',
+            terraform,
+        )
+    )
+    assert targets, "No Gateway targets found in the platform Terraform."
+
+    missing = [a for a in actions if a.split("___")[0] not in targets]
+    assert not missing, (
+        f"Cedar permits action(s) with no Gateway target in Terraform: {missing}. "
+        f"Targets defined: {sorted(targets)}"
+    )
 
 
 def test_policy_file_exists():

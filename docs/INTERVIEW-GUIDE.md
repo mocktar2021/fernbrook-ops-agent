@@ -79,7 +79,7 @@ Content filtering, prompt-attack patterns and PII masking at the model boundary.
 - The wholesale lookup and Knowledge Base are not deployed yet; the agent degrades gracefully when those tools are unavailable.
 - `us-east-1` only and one environment per account, because names are fixed. A real platform would parameterize both.
 - The infra role has one deliberately broad statement for AgentCore control-plane actions. The next step is to tighten it from CloudTrail or IAM Access Analyzer after a few applies.
-- The Cedar validation mode is relaxed until all the actions in the policy have deployed targets.
+- The Cedar policy runs with the relaxed `IGNORE_ALL_FINDINGS` mode, which skips only the semantic checks. Schema validation always runs, which I learned when my first apply failed because the policy named two tools with no Gateway target yet. The fix was to name only deployed tools and add the rest with their targets.
 - The idempotency window is time-based because the caller is a model. A production system would move more of this to the order system itself.
 - The evaluation suite exists and runs on demand, but is not part of the deployment gate yet. The gate is a three-check smoke test.
 - The Terraform was written from documentation and debugged on first deployment. Be ready to describe what broke and how you fixed it. That is a good story, not a weakness.

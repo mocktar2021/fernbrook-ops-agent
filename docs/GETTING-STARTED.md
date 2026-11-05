@@ -359,7 +359,7 @@ Honest list of things the author could not verify before handing this to you. Ea
 | Runtime start command | `opentelemetry-instrument app.py` as the entry point. | Use `["app.py"]` (you lose automatic tracing, not function). |
 | arm64 dependencies | Whether every pinned wheel has an arm64 build. | Pin a version that does. |
 | Gateway tool names | The agent resolves Gateway tool names (`Target___tool`) at run time; not checked against a live Gateway. | Run `list_tools` against the Gateway and compare. |
-| Cedar validation | The policy engine runs with `validation_mode = IGNORE_ALL_FINDINGS` because the wholesale and knowledge actions have no deployed targets. | Switch to `FAIL_ON_ANY_FINDINGS` once those targets exist. |
+| Cedar validation | The policy engine runs with `validation_mode = IGNORE_ALL_FINDINGS`, which skips only the semantic checks. The schema check always runs, so the policy names only the deployed order-lookup tool. | Try `FAIL_ON_ANY_FINDINGS` once the apply is green; add the wholesale and knowledge actions together with their targets. |
 | Infra role breadth | `bedrock-agentcore:*` is deliberately broad on the infra role. | After a few applies, tighten it using CloudTrail or IAM Access Analyzer. |
 | Model | Sonnet 4.6 was chosen because Sonnet 5.5 and Haiku 5.5 showed `agreementAvailability: NOT_AVAILABLE` on the author's account. It is Active, with end of life no sooner than 2027-02-17, so a redeploy after that date needs a newer model. | Set a different `model_id`; if you pick a pre-5 model, you may set `FERNBROOK_TEMPERATURE`. |
 | Auth | Terraform using `aws login` sessions locally. | Use the `export-credentials` fallback in Phase 2. |
