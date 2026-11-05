@@ -37,4 +37,4 @@ aws-opentelemetry-distro==0.19.0
 # cryptography ships as part of the python-jose[cryptography] extra
 # above; it isn't re-declared here to avoid two independent version
 # pins for the same package.
-pytest==9.1.1
+pytest==9.2.0
