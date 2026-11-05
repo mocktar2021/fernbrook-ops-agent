@@ -24,7 +24,6 @@ app = BedrockAgentCoreApp()
 
 @app.entrypoint
 def invoke(payload: dict) -> dict:
-    raise RuntimeError("rollback demo")
     """Handle one invocation of the deployed agent.
 
     Requires "prompt", "customer_token" (a Cognito ID token), and
