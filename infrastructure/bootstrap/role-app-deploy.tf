@@ -50,6 +50,18 @@ resource "aws_iam_policy" "app_deploy" {
         Resource = "*"
       },
       {
+        # AgentCore creates this service-linked role the first time a Runtime
+        # is created or updated in the account. Scoped to that one role and
+        # service, as in the AgentCore service-linked roles documentation.
+        Sid      = "CreateRuntimeIdentityServiceLinkedRole"
+        Effect   = "Allow"
+        Action   = ["iam:CreateServiceLinkedRole"]
+        Resource = "arn:${local.partition}:iam::${local.account_id}:role/aws-service-role/runtime-identity.bedrock-agentcore.amazonaws.com/AWSServiceRoleForBedrockAgentCoreRuntimeIdentity"
+        Condition = {
+          StringEquals = { "iam:AWSServiceName" = "runtime-identity.bedrock-agentcore.amazonaws.com" }
+        }
+      },
+      {
         Sid      = "PassOnlyTheRuntimeRole"
         Effect   = "Allow"
         Action   = ["iam:PassRole"]
