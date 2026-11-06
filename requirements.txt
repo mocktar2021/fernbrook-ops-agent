@@ -18,7 +18,7 @@ strands-agents[otel]==1.54.0
 # Design Note 7: the AgentCore Runtime Python SDK (BedrockAgentCoreApp).
 # Design Note 9 needs the strands-agents extra for the AgentCore Memory
 # session manager integration, so the extra is declared here directly.
-bedrock-agentcore[strands-agents]==1.22.0
+bedrock-agentcore[strands-agents]==1.25.2
 
 # Design Note 12: the MCP Python SDK, for connecting to AgentCore Gateway.
 mcp==1.30.0
